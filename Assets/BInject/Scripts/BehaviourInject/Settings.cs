@@ -6,7 +6,7 @@ namespace BehaviourInject.Internal
 	[CreateAssetMenu(fileName = "BInjectSettings", menuName = "Create BInSettings")]
 	public class Settings : ScriptableObject {
 
-		private const string SETTINGS_PATH = "BInjectSettings";
+		public const string SETTINGS_PATH = "BInjectSettings";
 
 		private static Settings _instance;
 
