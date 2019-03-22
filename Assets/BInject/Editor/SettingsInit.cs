@@ -24,7 +24,7 @@ namespace BInject.Editor
 			}
 			
 			asset = ScriptableObject.CreateInstance<Settings>();
-			string path = RESOURCES_PATH + Settings.SETTINGS_PATH;
+			string path = RESOURCES_PATH + Settings.SETTINGS_PATH + ".asset";
 			AssetDatabase.CreateAsset(asset, path);
 			AssetDatabase.SaveAssets();
 			AssetDatabase.Refresh();
