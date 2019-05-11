@@ -24,6 +24,18 @@ BehaviourInject is done for Unit3d to preserve familiar pipeline. It allows inje
 * <a href="#commands">Commands</a>
 * <a href="#go-context">GameObject context</a>
 
+### Install using UnityPackageManager (for Unity 2018.3+) ###
+Find the manifest.json file in the Packages folder of your project and edit it to look like this:
+```
+{
+  "dependencies": {
+    "com.sergeysychov.behaviour_inject": "https://github.com/Temka193/behaviour_inject.git#1.0.5",
+    ...
+  },
+}
+```
+To update the package, change #{version} to the target version.
+
 ## <a id="howto"></a> How to
 
 For most cases you will need only three entities:
