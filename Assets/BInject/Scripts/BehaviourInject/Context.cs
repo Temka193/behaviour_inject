@@ -26,6 +26,7 @@ using System;
 using System.Reflection;
 using System.Collections.Generic;
 using BehaviourInject.Internal;
+
 #if BINJECT_DIAGNOSTICS
 using BehaviourInject.Diagnostics;
 #endif
@@ -113,14 +114,21 @@ namespace BehaviourInject
 
 		public void TransmitEvent(object evnt)
 		{
+			int count = _listedDependencies.Count;
+			for (int i = 0; i < count; i++)
+				_listedDependencies[i].AlreadyNotified = false;
+			
 			Type eventType = evnt.GetType();
 			for (int i = 0; i < _listedDependencies.Count; i++)
 			{
 				IDependency dependency = _listedDependencies[i];
-				if (dependency.IsSingle)
+				if (dependency.IsSingle 
+				    && ReflectionCache.GetEventHandlersFor(dependency.DependencyType).Length > 0
+					&& !dependency.AlreadyNotified)
 				{
 					object target = dependency.Resolve(this, 0);
 					InjectEventTo(target, eventType, evnt);
+					dependency.AlreadyNotified = true;
 				}
 			}
 
@@ -280,6 +288,33 @@ namespace BehaviourInject
 			InsertDependency(dependencyType, new SingleAutocomposeDependency(concreteType));
 			return this;
 		}
+		
+		
+		public Context RegisterTypeAsMultiple<T>(params Type[] types)
+		{
+			Type concreteType = typeof(T);
+			IDependency dependency = new SingleAutocomposeDependency(concreteType);
+			int length = types.Length;
+			
+			if(length == 0)
+				throw new BehaviourInjectException("register types array shouldn't be empty");
+			
+			for (int i = 0; i < length; i++)
+			{
+				Type dependencyType = types[i];
+				ThrowIfNotAncestor(concreteType, dependencyType);
+				ThrowIfRegistered(dependencyType);
+				InsertDependency(dependencyType, dependency);	
+			}
+			return this;
+		}
+
+
+		private void ThrowIfNotAncestor(Type descent, Type ancestor)
+		{
+			if (!ancestor.IsAssignableFrom(descent))
+				throw new BehaviourInjectException("Can not register " + descent.FullName + " as " + ancestor.FullName + ": no ancestry");
+		}
 
 
 		public Context RegisterCommand<EventT, CommandT>() where CommandT : ICommand
@@ -312,7 +347,7 @@ namespace BehaviourInject
 			object dependency;
 
 			if(! TryResolve(resolvingType, out dependency))
-				throw new BehaviourInjectException(String.Format("Can not resolve. Type {0} not registered in this context!", resolvingType.FullName));
+				throw new BehaviourInjectException($"Can not resolve. Type {resolvingType.FullName} not registered in {_name} context!");
 
 			return dependency;
 		}
@@ -364,9 +399,18 @@ namespace BehaviourInject
                 ParameterInfo parameter = parameters[i];
                 Type argumentType = parameter.ParameterType;
 
-				object dependency;
-				if (!TryResolve(argumentType, out dependency, hierarchyDepthCount))
-					throw new BehaviourInjectException(String.Format("Could not resolve {0} in context {1}. Probably it's not registered", argumentType.FullName, _name));
+                object dependency;
+                if (AttributeUtils.IsMarked<CreateAttribute>(parameter))
+                {
+	                dependency = AutocomposeDependency(argumentType, hierarchyDepthCount);
+                }
+                else
+                {
+	                if (!TryResolve(argumentType, out dependency, hierarchyDepthCount))
+		                throw new BehaviourInjectException(String.Format(
+			                "Could not resolve {0} for {2} in context {1}. Probably it's not registered",
+			                argumentType.FullName, _name, resolvingType.FullName));
+                }
 
 				arguments[i] = dependency;
             }
